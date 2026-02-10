@@ -4,6 +4,7 @@ import Navigation from './components/Navigation'
 import SwipeIndicator from './components/SwipeIndicator'
 import Dashboard from './pages/Dashboard'
 import History from './pages/History'
+import EngineLogs from './pages/EngineLogs'
 import Relays from './pages/Relays'
 import Settings from './pages/Settings'
 import { useWebSocket } from './utils/websocket'
@@ -21,7 +22,7 @@ function AppContent() {
   })
 
   // Define page order for swipe navigation
-  const pages = ['/dashboard', '/history', '/relays', '/settings']
+  const pages = ['/dashboard', '/history', '/engine-logs', '/relays', '/settings']
   const currentIndex = pages.indexOf(location.pathname)
 
   // Swipe handlers
@@ -51,6 +52,7 @@ function AppContent() {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/history" element={<History />} />
+          <Route path="/engine-logs" element={<EngineLogs />} />
           <Route path="/relays" element={<Relays />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>

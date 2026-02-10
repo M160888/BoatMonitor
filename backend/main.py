@@ -10,10 +10,11 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
-from api import sensors, victron, relays, relays_ws, settings, history
+from api import sensors, victron, relays, relays_ws, settings, history, engine_logs
 from hardware.sensor_manager import SensorManager
 from hardware.relay_manager import RelayManager
 from victron.device_manager import VictronManager
+from services.data_logger import DataLogger
 from database.database import init_database
 
 # Configure logging
@@ -27,12 +28,13 @@ logger = logging.getLogger(__name__)
 sensor_manager = None
 victron_manager = None
 relay_manager = None
+data_logger = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
-    global sensor_manager, victron_manager, relay_manager
+    global sensor_manager, victron_manager, relay_manager, data_logger
 
     logger.info("Starting BoatMonitor...")
 
@@ -43,11 +45,13 @@ async def lifespan(app: FastAPI):
     sensor_manager = SensorManager()
     victron_manager = VictronManager()
     relay_manager = RelayManager()
+    data_logger = DataLogger()
 
     # Start background tasks
     asyncio.create_task(sensor_manager.start())
     asyncio.create_task(victron_manager.start())
     asyncio.create_task(relay_manager.start())
+    asyncio.create_task(data_logger.start(sensor_manager, victron_manager))
 
     logger.info("BoatMonitor started successfully")
 
@@ -58,6 +62,7 @@ async def lifespan(app: FastAPI):
     await sensor_manager.stop()
     await victron_manager.stop()
     await relay_manager.stop()
+    await data_logger.stop()
     logger.info("BoatMonitor stopped")
 
 
@@ -85,6 +90,7 @@ app.include_router(relays.router, prefix="/api/relays", tags=["relays"])
 app.include_router(relays_ws.router, prefix="/api/relays", tags=["relays"])
 app.include_router(settings.router, prefix="/api/settings", tags=["settings"])
 app.include_router(history.router, prefix="/api/history", tags=["history"])
+app.include_router(engine_logs.router, prefix="/api/engine", tags=["engine"])
 
 
 @app.get("/api/health")

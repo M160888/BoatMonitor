@@ -4,6 +4,7 @@ const Navigation = ({ isConnected }) => {
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: '📊' },
     { path: '/history', label: 'History', icon: '📈' },
+    { path: '/engine-logs', label: 'Engine', icon: '🚤' },
     { path: '/relays', label: 'Relays', icon: '⚡' },
     { path: '/settings', label: 'Settings', icon: '⚙️' },
   ]
