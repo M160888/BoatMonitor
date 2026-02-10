@@ -239,12 +239,58 @@ const SensorCalibration = ({ password }) => {
         <TankCalibration sensor="waste_tank" title="Waste Tank" icon="🚽" />
       </div>
 
+      {/* Digital/Frequency Sensors */}
+      <div className="mb-6">
+        <h4 className="text-lg font-bold text-nature-400 mb-3">Digital/Frequency Sensors</h4>
+        <div className="bg-gray-700 rounded-lg p-4 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-2xl">🚤</span>
+            <h4 className="text-lg font-bold">Engine RPM (W-Terminal)</h4>
+          </div>
+
+          <div className="bg-gray-800 rounded p-3 mb-3">
+            <label className="block text-sm text-gray-400 mb-2">
+              Pulses Per Revolution (PPR)
+            </label>
+            <input
+              type="number"
+              step="0.5"
+              value={calibration.engine_rpm?.pulses_per_rev || 1}
+              onChange={(e) => updateCalibration('engine_rpm', 'pulses_per_rev', e.target.value)}
+              className="w-full px-3 py-2 bg-gray-900 rounded"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Typical marine diesel: 0.5 to 1.0 pulses per revolution
+            </p>
+          </div>
+
+          <div className="bg-gray-800 rounded p-3">
+            <label className="block text-sm text-gray-400 mb-2">
+              RPM Calculation: (Frequency Hz × 60) ÷ Pulses Per Rev
+            </label>
+            <div className="text-xs text-gray-500 space-y-1">
+              <p>• If your engine sends 1 pulse per revolution: PPR = 1.0</p>
+              <p>• If your engine sends 1 pulse per 2 revolutions: PPR = 0.5</p>
+              <p>• Check engine manual or use tachometer to verify</p>
+            </div>
+          </div>
+
+          {testMode && (
+            <div className="mt-3 p-3 bg-gray-800 rounded">
+              <div className="text-sm text-gray-400">Current Reading:</div>
+              <div className="text-2xl font-bold text-nature-400">
+                {sensors.engine_rpm?.toFixed(0) || '--'} RPM
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Analog Sensors */}
       <div className="mb-6">
         <h4 className="text-lg font-bold text-sun-400 mb-3">Analog Sensors</h4>
         <AnalogCalibration sensor="oil_pressure" title="Oil Pressure" icon="🛢️" unit="PSI" />
         <AnalogCalibration sensor="coolant_temp" title="Coolant Temperature" icon="🌡️" unit="°C" />
-        <AnalogCalibration sensor="engine_rpm" title="Engine RPM" icon="🚤" unit="RPM" />
       </div>
 
       {/* Calibration Guide */}
@@ -257,6 +303,13 @@ const SensorCalibration = ({ password }) => {
             <li>Empty the tank completely, click "Use Current" for 0%</li>
             <li>Fill the tank completely, click "Use Current" for 100%</li>
             <li>Save calibration</li>
+          </ol>
+          <p className="mt-3"><strong>RPM Calibration (Digital):</strong></p>
+          <ol className="list-decimal list-inside space-y-1 ml-2">
+            <li>Run engine at known RPM (use external tachometer)</li>
+            <li>Note displayed RPM in Test Mode</li>
+            <li>Adjust "Pulses Per Rev" until displayed matches actual</li>
+            <li>Common values: 0.5, 1.0, or check engine manual</li>
           </ol>
           <p className="mt-3"><strong>Analog Sensors:</strong></p>
           <ul className="list-disc list-inside space-y-1 ml-2">

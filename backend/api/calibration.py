@@ -41,7 +41,7 @@ async def get_calibration(password: Optional[str] = Header(None)):
                 "waste_tank": {"min": 0, "max": 4095, "offset": 0, "scale": 1},
                 "oil_pressure": {"offset": 0, "scale": 1},
                 "coolant_temp": {"offset": 0, "scale": 1},
-                "engine_rpm": {"offset": 0, "scale": 1}
+                "engine_rpm": {"pulses_per_rev": 1.0}  # Digital frequency input
             }
 
         except Exception as e:
