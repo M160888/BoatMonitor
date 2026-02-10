@@ -15,7 +15,7 @@ class RelayManager:
     def __init__(self):
         self.running = False
         self.relays: Dict[str, Dict[str, Any]] = {}
-        self.flash_tasks: Dict[str, asyncio.Task] = {}
+        self.timed_tasks: Dict[str, asyncio.Task] = {}
         self.simulation_mode = settings.SIMULATION_MODE
 
         # Initialize relay states
@@ -29,8 +29,8 @@ class RelayManager:
                     "state": False,
                     "name": f"Relay {board_id * 3 + relay_num + 1}",
                     "enabled": True,
-                    "mode": "normal",  # normal or flash
-                    "flash_interval": 1.0,  # seconds
+                    "mode": "normal",  # normal or timed
+                    "timed_duration": 60,  # seconds (for timed mode - can be hours: 3600)
                 }
 
         if not self.simulation_mode:
@@ -54,10 +54,10 @@ class RelayManager:
     async def stop(self):
         """Stop relay manager and turn off all relays"""
         self.running = False
-        # Stop all flash tasks
-        for task in self.flash_tasks.values():
+        # Stop all timed tasks
+        for task in self.timed_tasks.values():
             task.cancel()
-        self.flash_tasks.clear()
+        self.timed_tasks.clear()
         # Turn off all relays
         for relay_id in self.relays.keys():
             await self.set_relay(relay_id, False)
@@ -71,7 +71,7 @@ class RelayManager:
         """Get all relay configurations and states"""
         return self.relays.copy()
 
-    async def set_relay(self, relay_id: str, state: bool) -> bool:
+    async def set_relay(self, relay_id: str, state: bool, cancel_timer: bool = True) -> bool:
         """Set relay state"""
         if relay_id not in self.relays:
             logger.error(f"Relay {relay_id} not found")
@@ -83,10 +83,10 @@ class RelayManager:
             logger.warning(f"Relay {relay_id} is disabled")
             return False
 
-        # Cancel flash task if switching to normal state
-        if relay_id in self.flash_tasks:
-            self.flash_tasks[relay_id].cancel()
-            del self.flash_tasks[relay_id]
+        # Cancel timed task if requested
+        if cancel_timer and relay_id in self.timed_tasks:
+            self.timed_tasks[relay_id].cancel()
+            del self.timed_tasks[relay_id]
 
         # Set hardware relay
         if not self.simulation_mode:
@@ -128,71 +128,53 @@ class RelayManager:
                 # Turn off relay if disabled
                 await self.set_relay(relay_id, False)
         if "mode" in config:
-            old_mode = relay["mode"]
             relay["mode"] = config["mode"]
-
-            # Handle mode changes
-            if old_mode == "flash" and config["mode"] == "normal":
-                # Stop flashing
-                if relay_id in self.flash_tasks:
-                    self.flash_tasks[relay_id].cancel()
-                    del self.flash_tasks[relay_id]
-            elif old_mode == "normal" and config["mode"] == "flash":
-                # Start flashing if relay is on
-                if relay["state"]:
-                    await self.start_flash(relay_id)
-
-        if "flash_interval" in config:
-            relay["flash_interval"] = config["flash_interval"]
-            # Restart flash task if currently flashing
-            if relay["mode"] == "flash" and relay_id in self.flash_tasks:
-                self.flash_tasks[relay_id].cancel()
-                await self.start_flash(relay_id)
+        if "timed_duration" in config:
+            relay["timed_duration"] = config["timed_duration"]
 
         logger.info(f"Updated relay {relay_id} config: {config}")
         return True
 
-    async def start_flash(self, relay_id: str):
-        """Start flashing a relay"""
+    async def start_timed_relay(self, relay_id: str, duration: float):
+        """Start a timed relay (auto-off after duration)"""
         if relay_id not in self.relays:
             return
 
         relay = self.relays[relay_id]
 
-        # Cancel existing flash task
-        if relay_id in self.flash_tasks:
-            self.flash_tasks[relay_id].cancel()
+        # Cancel existing timed task
+        if relay_id in self.timed_tasks:
+            self.timed_tasks[relay_id].cancel()
 
-        async def flash_task():
+        async def timed_task():
             try:
-                while True:
-                    # Toggle relay
-                    current_state = relay["state"]
-                    await self.set_relay(relay_id, not current_state)
-                    await asyncio.sleep(relay["flash_interval"])
+                logger.info(f"Timed relay {relay_id} starting for {duration}s")
+                await asyncio.sleep(duration)
+                # Turn off after duration
+                await self.set_relay(relay_id, False, cancel_timer=False)
+                logger.info(f"Timed relay {relay_id} auto-off after {duration}s")
             except asyncio.CancelledError:
-                logger.info(f"Flash task for {relay_id} cancelled")
+                logger.info(f"Timed task for {relay_id} cancelled")
 
         # Create and store task
-        task = asyncio.create_task(flash_task())
-        self.flash_tasks[relay_id] = task
-        logger.info(f"Started flashing relay {relay_id} with interval {relay['flash_interval']}s")
+        task = asyncio.create_task(timed_task())
+        self.timed_tasks[relay_id] = task
 
     async def turn_on(self, relay_id: str) -> bool:
-        """Turn relay on (handles flash mode)"""
+        """Turn relay on (handles timed mode)"""
         if relay_id not in self.relays:
             return False
 
         relay = self.relays[relay_id]
 
-        if relay["mode"] == "flash":
-            # Start flashing
-            relay["state"] = True
-            await self.start_flash(relay_id)
-            return True
-        else:
-            # Normal on
-            return await self.set_relay(relay_id, True)
+        # Turn on the relay
+        success = await self.set_relay(relay_id, True, cancel_timer=True)
+
+        if success and relay["mode"] == "timed":
+            # Start timer for auto-off
+            await self.start_timed_relay(relay_id, relay["timed_duration"])
+
+        return success
 
     async def turn_off(self, relay_id: str) -> bool:
         """Turn relay off"""

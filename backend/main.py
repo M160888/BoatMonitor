@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
-from api import sensors, victron, relays, settings, history
+from api import sensors, victron, relays, relays_ws, settings, history
 from hardware.sensor_manager import SensorManager
 from hardware.relay_manager import RelayManager
 from victron.device_manager import VictronManager
@@ -82,6 +82,7 @@ app.add_middleware(
 app.include_router(sensors.router, prefix="/api/sensors", tags=["sensors"])
 app.include_router(victron.router, prefix="/api/victron", tags=["victron"])
 app.include_router(relays.router, prefix="/api/relays", tags=["relays"])
+app.include_router(relays_ws.router, prefix="/api/relays", tags=["relays"])
 app.include_router(settings.router, prefix="/api/settings", tags=["settings"])
 app.include_router(history.router, prefix="/api/history", tags=["history"])
 

@@ -6,12 +6,48 @@ const Relays = () => {
   const [relays, setRelays] = useState([])
   const [editingRelay, setEditingRelay] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [ws, setWs] = useState(null)
 
   useEffect(() => {
     loadRelays()
-    // Refresh relay states every 2 seconds
-    const interval = setInterval(loadRelays, 2000)
-    return () => clearInterval(interval)
+
+    // Connect to WebSocket for real-time updates
+    const websocket = new WebSocket('ws://localhost:8000/api/relays/ws')
+
+    websocket.onopen = () => {
+      console.log('Relay WebSocket connected')
+    }
+
+    websocket.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data)
+        if (message.type === 'relay_update' && message.data) {
+          setRelays(Object.values(message.data))
+        }
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error)
+      }
+    }
+
+    websocket.onerror = (error) => {
+      console.error('WebSocket error:', error)
+    }
+
+    websocket.onclose = () => {
+      console.log('WebSocket disconnected, reconnecting...')
+      setTimeout(() => {
+        // Reconnect after 3 seconds
+        window.location.reload()
+      }, 3000)
+    }
+
+    setWs(websocket)
+
+    return () => {
+      if (websocket) {
+        websocket.close()
+      }
+    }
   }, [])
 
   const loadRelays = async () => {
@@ -30,7 +66,7 @@ const Relays = () => {
     try {
       const endpoint = currentState ? 'off' : 'on'
       await axios.post(`/api/relays/${relayId}/${endpoint}`)
-      await loadRelays() // Refresh to get updated state
+      // WebSocket will update the state automatically
     } catch (error) {
       console.error('Error toggling relay:', error)
       alert('Failed to toggle relay')
@@ -47,6 +83,20 @@ const Relays = () => {
     } catch (error) {
       console.error('Error updating relay:', error)
       alert('Failed to update relay configuration')
+    }
+  }
+
+  const formatDuration = (seconds) => {
+    if (seconds >= 3600) {
+      const hours = Math.floor(seconds / 3600)
+      const mins = Math.floor((seconds % 3600) / 60)
+      return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`
+    } else if (seconds >= 60) {
+      const mins = Math.floor(seconds / 60)
+      const secs = Math.floor(seconds % 60)
+      return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`
+    } else {
+      return `${seconds}s`
     }
   }
 
@@ -85,7 +135,7 @@ const Relays = () => {
               <div
                 className={`w-20 h-20 rounded-full flex items-center justify-center text-4xl transition-all ${
                   relay.state
-                    ? 'bg-nature-500 shadow-lg shadow-nature-500/50 animate-pulse'
+                    ? 'bg-nature-500 shadow-lg shadow-nature-500/50'
                     : 'bg-gray-700'
                 }`}
               >
@@ -95,9 +145,9 @@ const Relays = () => {
 
             {/* Mode Badge */}
             <div className="flex justify-center gap-2 mb-4 min-h-[32px]">
-              {relay.mode === 'flash' && (
+              {relay.mode === 'timed' && (
                 <span className="px-3 py-1 bg-sun-600 rounded-full text-sm">
-                  Flash Mode • {relay.flash_interval}s
+                  Auto-Off • {formatDuration(relay.timed_duration)}
                 </span>
               )}
               {!relay.enabled && (

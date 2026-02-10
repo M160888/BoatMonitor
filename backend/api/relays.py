@@ -14,8 +14,8 @@ class RelayConfig(BaseModel):
     """Relay configuration model"""
     name: Optional[str] = None
     enabled: Optional[bool] = None
-    mode: Optional[str] = None  # "normal" or "flash"
-    flash_interval: Optional[float] = None
+    mode: Optional[str] = None  # "normal" or "timed"
+    timed_duration: Optional[float] = None  # seconds (can be hours: 3600 = 1hr)
 
 
 @router.get("")

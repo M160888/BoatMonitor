@@ -5,12 +5,45 @@ const RelayEditModal = ({ relay, onSave, onClose }) => {
     name: relay.name,
     enabled: relay.enabled,
     mode: relay.mode,
-    flash_interval: relay.flash_interval,
+    timed_duration: relay.timed_duration || 60,
   })
+
+  // Convert seconds to hours/minutes/seconds for display
+  const [timeUnit, setTimeUnit] = useState(
+    config.timed_duration >= 3600 ? 'hours' :
+    config.timed_duration >= 60 ? 'minutes' : 'seconds'
+  )
+
+  const getTimeValue = () => {
+    if (timeUnit === 'hours') return config.timed_duration / 3600
+    if (timeUnit === 'minutes') return config.timed_duration / 60
+    return config.timed_duration
+  }
+
+  const setTimeValue = (value) => {
+    let seconds = parseFloat(value) || 0
+    if (timeUnit === 'hours') seconds *= 3600
+    else if (timeUnit === 'minutes') seconds *= 60
+    setConfig({ ...config, timed_duration: seconds })
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
     onSave(relay.id, config)
+  }
+
+  const formatDuration = (seconds) => {
+    if (seconds >= 3600) {
+      const hours = Math.floor(seconds / 3600)
+      const mins = Math.floor((seconds % 3600) / 60)
+      return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`
+    } else if (seconds >= 60) {
+      const mins = Math.floor(seconds / 60)
+      const secs = Math.floor(seconds % 60)
+      return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`
+    } else {
+      return `${seconds}s`
+    }
   }
 
   return (
@@ -19,7 +52,7 @@ const RelayEditModal = ({ relay, onSave, onClose }) => {
       onClick={onClose}
     >
       <div
-        className="bg-gray-800 rounded-lg p-6 w-96 max-w-full mx-4 shadow-2xl"
+        className="bg-gray-800 rounded-lg p-6 w-96 max-w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-2xl font-bold mb-6 text-white">
@@ -78,40 +111,56 @@ const RelayEditModal = ({ relay, onSave, onClose }) => {
               </button>
               <button
                 type="button"
-                onClick={() => setConfig({ ...config, mode: 'flash' })}
+                onClick={() => setConfig({ ...config, mode: 'timed' })}
                 className={`py-2 px-4 rounded-lg font-semibold transition-colors ${
-                  config.mode === 'flash'
+                  config.mode === 'timed'
                     ? 'bg-sun-600 text-white'
                     : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
                 }`}
               >
-                Flash
+                Auto-Off
               </button>
             </div>
           </div>
 
-          {/* Flash Interval */}
-          {config.mode === 'flash' && (
+          {/* Timed Duration */}
+          {config.mode === 'timed' && (
             <div>
               <label className="block text-sm text-gray-400 mb-2">
-                Flash Interval (seconds)
+                Auto-Off Duration
               </label>
+
+              {/* Time Unit Selector */}
+              <div className="flex gap-2 mb-2">
+                {['seconds', 'minutes', 'hours'].map((unit) => (
+                  <button
+                    key={unit}
+                    type="button"
+                    onClick={() => setTimeUnit(unit)}
+                    className={`px-3 py-1 rounded text-sm font-semibold transition-colors ${
+                      timeUnit === unit
+                        ? 'bg-sun-600 text-white'
+                        : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                    }`}
+                  >
+                    {unit}
+                  </button>
+                ))}
+              </div>
+
               <input
                 type="number"
                 step="0.1"
                 min="0.1"
-                max="10"
-                value={config.flash_interval}
-                onChange={(e) =>
-                  setConfig({
-                    ...config,
-                    flash_interval: parseFloat(e.target.value),
-                  })
-                }
+                value={getTimeValue()}
+                onChange={(e) => setTimeValue(e.target.value)}
                 className="w-full px-4 py-2 bg-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-sun-500"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Time between on/off toggles (0.1 - 10 seconds)
+                Total duration: {formatDuration(config.timed_duration)}
+              </p>
+              <p className="text-xs text-gray-400 mt-2">
+                💡 Relay will turn on, stay on for this duration, then automatically turn off
               </p>
             </div>
           )}
