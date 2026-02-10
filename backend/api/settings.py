@@ -1,7 +1,7 @@
 """
 Settings API endpoints (password protected)
 """
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Header, Depends
 from pydantic import BaseModel
 from typing import Dict, Any, Optional
 from config import settings as app_settings

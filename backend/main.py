@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api import sensors, victron, relays, settings, history
 from hardware.sensor_manager import SensorManager
+from hardware.relay_manager import RelayManager
 from victron.device_manager import VictronManager
 from database.database import init_database
 
@@ -25,12 +26,13 @@ logger = logging.getLogger(__name__)
 # Global managers
 sensor_manager = None
 victron_manager = None
+relay_manager = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
-    global sensor_manager, victron_manager
+    global sensor_manager, victron_manager, relay_manager
 
     logger.info("Starting BoatMonitor...")
 
@@ -40,10 +42,12 @@ async def lifespan(app: FastAPI):
     # Initialize hardware managers
     sensor_manager = SensorManager()
     victron_manager = VictronManager()
+    relay_manager = RelayManager()
 
     # Start background tasks
     asyncio.create_task(sensor_manager.start())
     asyncio.create_task(victron_manager.start())
+    asyncio.create_task(relay_manager.start())
 
     logger.info("BoatMonitor started successfully")
 
@@ -53,6 +57,7 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down BoatMonitor...")
     await sensor_manager.stop()
     await victron_manager.stop()
+    await relay_manager.stop()
     logger.info("BoatMonitor stopped")
 
 
@@ -87,7 +92,8 @@ async def health_check():
     return {
         "status": "healthy",
         "sensors": sensor_manager.is_running() if sensor_manager else False,
-        "victron": victron_manager.is_running() if victron_manager else False
+        "victron": victron_manager.is_running() if victron_manager else False,
+        "relays": relay_manager.running if relay_manager else False
     }
 
 

@@ -1,12 +1,17 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
+import RelayEditModal from '../components/RelayEditModal'
 
 const Relays = () => {
   const [relays, setRelays] = useState([])
   const [editingRelay, setEditingRelay] = useState(null)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     loadRelays()
+    // Refresh relay states every 2 seconds
+    const interval = setInterval(loadRelays, 2000)
+    return () => clearInterval(interval)
   }, [])
 
   const loadRelays = async () => {
@@ -18,22 +23,30 @@ const Relays = () => {
     }
   }
 
-  const toggleRelay = async (relayId) => {
+  const toggleRelay = async (relayId, currentState) => {
+    if (loading) return
+    setLoading(true)
+
     try {
-      await axios.post(`/api/relays/${relayId}/toggle`)
-      loadRelays()
+      const endpoint = currentState ? 'off' : 'on'
+      await axios.post(`/api/relays/${relayId}/${endpoint}`)
+      await loadRelays() // Refresh to get updated state
     } catch (error) {
       console.error('Error toggling relay:', error)
+      alert('Failed to toggle relay')
+    } finally {
+      setLoading(false)
     }
   }
 
-  const updateRelay = async (relayId, config) => {
+  const handleSaveConfig = async (relayId, config) => {
     try {
       await axios.put(`/api/relays/${relayId}`, config)
-      loadRelays()
+      await loadRelays()
       setEditingRelay(null)
     } catch (error) {
       console.error('Error updating relay:', error)
+      alert('Failed to update relay configuration')
     }
   }
 
@@ -47,20 +60,21 @@ const Relays = () => {
             key={relay.id}
             className={`bg-gray-800 rounded-lg p-6 shadow-xl border-2 transition-all ${
               relay.state
-                ? 'border-nature-500'
+                ? 'border-nature-500 shadow-nature-500/30'
                 : 'border-gray-700'
-            }`}
+            } ${!relay.enabled ? 'opacity-50' : ''}`}
           >
             <div className="flex justify-between items-start mb-4">
-              <div>
+              <div className="flex-1">
                 <h3 className="text-xl font-bold">{relay.name}</h3>
                 <p className="text-sm text-gray-400">
                   Board {relay.board_id + 1} • Relay {relay.relay_number + 1}
                 </p>
               </div>
               <button
-                onClick={() => setEditingRelay(relay.id)}
-                className="text-gray-400 hover:text-white"
+                onClick={() => setEditingRelay(relay)}
+                className="text-gray-400 hover:text-white transition-colors"
+                title="Edit relay settings"
               >
                 ⚙️
               </button>
@@ -69,9 +83,9 @@ const Relays = () => {
             {/* Status Indicator */}
             <div className="flex items-center justify-center my-6">
               <div
-                className={`w-20 h-20 rounded-full flex items-center justify-center text-4xl ${
+                className={`w-20 h-20 rounded-full flex items-center justify-center text-4xl transition-all ${
                   relay.state
-                    ? 'bg-nature-500 shadow-lg shadow-nature-500/50'
+                    ? 'bg-nature-500 shadow-lg shadow-nature-500/50 animate-pulse'
                     : 'bg-gray-700'
                 }`}
               >
@@ -80,27 +94,32 @@ const Relays = () => {
             </div>
 
             {/* Mode Badge */}
-            {relay.mode === 'flash' && (
-              <div className="text-center mb-4">
+            <div className="flex justify-center gap-2 mb-4 min-h-[32px]">
+              {relay.mode === 'flash' && (
                 <span className="px-3 py-1 bg-sun-600 rounded-full text-sm">
                   Flash Mode • {relay.flash_interval}s
                 </span>
-              </div>
-            )}
+              )}
+              {!relay.enabled && (
+                <span className="px-3 py-1 bg-gray-600 rounded-full text-sm">
+                  Disabled
+                </span>
+              )}
+            </div>
 
             {/* Control Button */}
             <button
-              onClick={() => toggleRelay(relay.id)}
-              disabled={!relay.enabled}
+              onClick={() => toggleRelay(relay.id, relay.state)}
+              disabled={!relay.enabled || loading}
               className={`w-full py-3 rounded-lg font-bold transition-all ${
                 relay.enabled
                   ? relay.state
-                    ? 'bg-red-600 hover:bg-red-700'
-                    : 'bg-nature-600 hover:bg-nature-700'
+                    ? 'bg-red-600 hover:bg-red-700 active:scale-95'
+                    : 'bg-nature-600 hover:bg-nature-700 active:scale-95'
                   : 'bg-gray-700 cursor-not-allowed'
-              }`}
+              } ${loading ? 'opacity-50 cursor-wait' : ''}`}
             >
-              {relay.state ? 'Turn OFF' : 'Turn ON'}
+              {loading ? '...' : relay.state ? 'Turn OFF' : 'Turn ON'}
             </button>
           </div>
         ))}
@@ -108,18 +127,11 @@ const Relays = () => {
 
       {/* Edit Modal */}
       {editingRelay && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-lg p-6 w-96">
-            <h3 className="text-xl font-bold mb-4">Edit Relay</h3>
-            {/* Edit form will go here */}
-            <button
-              onClick={() => setEditingRelay(null)}
-              className="mt-4 w-full py-2 bg-gray-700 hover:bg-gray-600 rounded-lg"
-            >
-              Close
-            </button>
-          </div>
-        </div>
+        <RelayEditModal
+          relay={editingRelay}
+          onSave={handleSaveConfig}
+          onClose={() => setEditingRelay(null)}
+        />
       )}
     </div>
   )
