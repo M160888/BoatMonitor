@@ -16,7 +16,11 @@ const Relays = () => {
     // Connect to WebSocket for real-time updates
     const connectWebSocket = () => {
       try {
-        const websocket = new WebSocket('ws://localhost:8000/api/relays/ws')
+        // Use relative WebSocket URL to work through Vite proxy
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+        const wsUrl = `${protocol}//${window.location.host}/api/relays/ws`
+        console.log('Connecting to WebSocket:', wsUrl)
+        const websocket = new WebSocket(wsUrl)
 
         websocket.onopen = () => {
           console.log('Relay WebSocket connected')

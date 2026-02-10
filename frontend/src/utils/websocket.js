@@ -9,7 +9,16 @@ export const useWebSocket = (url, options = {}) => {
   useEffect(() => {
     const connect = () => {
       try {
-        const ws = new WebSocket(url)
+        // Convert relative URLs to work with current host (for Codespaces compatibility)
+        let wsUrl = url
+        if (url.startsWith('ws://localhost')) {
+          const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+          // Extract path from URL
+          const urlObj = new URL(url)
+          wsUrl = `${protocol}//${window.location.host}${urlObj.pathname}`
+          console.log('WebSocket URL converted:', url, '→', wsUrl)
+        }
+        const ws = new WebSocket(wsUrl)
         wsRef.current = ws
 
         ws.onopen = () => {
