@@ -18,8 +18,9 @@ async def get_engine_statistics(
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
 ):
-    """Get comprehensive engine usage statistics"""
+    """Get comprehensive engine usage statistics with threshold violations"""
     from main import data_logger
+    import axios
 
     if not data_logger:
         raise HTTPException(status_code=503, detail="Data logger not available")
@@ -34,20 +35,119 @@ async def get_engine_statistics(
             end = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
 
         stats = await data_logger.get_engine_statistics(start, end)
-
-        # Get additional sensor stats
         oil_stats = await data_logger.get_sensor_stats("oil_pressure", start, end)
         temp_stats = await data_logger.get_sensor_stats("coolant_temp", start, end)
+
+        # Get thresholds and check for violations
+        async with AsyncSessionLocal() as session:
+            from database.models import SystemSettings
+            result = await session.execute(
+                select(SystemSettings).where(SystemSettings.key == "sensor_thresholds")
+            )
+            setting = result.scalar_one_or_none()
+
+            thresholds = setting.value if setting and setting.value else {
+                "engine_rpm_max": 3000.0,
+                "oil_pressure_min": 20.0,
+                "oil_pressure_max": 80.0,
+                "coolant_temp_max": 95.0,
+            }
+
+            # Count threshold violations
+            violations = await count_threshold_violations(session, start, end, thresholds)
 
         return {
             "engine": stats,
             "oil_pressure": oil_stats,
             "coolant_temperature": temp_stats,
+            "thresholds": thresholds,
+            "violations": violations,
         }
 
     except Exception as e:
         logger.error(f"Error getting engine statistics: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+async def count_threshold_violations(session, start_time, end_time, thresholds):
+    """Count how many times sensors exceeded thresholds"""
+    violations = {
+        "rpm_exceeded": 0,
+        "oil_low": 0,
+        "oil_high": 0,
+        "temp_high": 0,
+        "total": 0,
+    }
+
+    # Check RPM violations
+    rpm_query = select(func.count()).select_from(SensorReading).where(
+        and_(
+            SensorReading.sensor_type == "engine_rpm",
+            SensorReading.value > thresholds["engine_rpm_max"]
+        )
+    )
+    if start_time:
+        rpm_query = rpm_query.where(SensorReading.timestamp >= start_time)
+    if end_time:
+        rpm_query = rpm_query.where(SensorReading.timestamp <= end_time)
+
+    result = await session.execute(rpm_query)
+    violations["rpm_exceeded"] = result.scalar() or 0
+
+    # Check oil pressure violations (low)
+    oil_low_query = select(func.count()).select_from(SensorReading).where(
+        and_(
+            SensorReading.sensor_type == "oil_pressure",
+            SensorReading.value < thresholds["oil_pressure_min"],
+            SensorReading.value > 0  # Exclude zero/null readings
+        )
+    )
+    if start_time:
+        oil_low_query = oil_low_query.where(SensorReading.timestamp >= start_time)
+    if end_time:
+        oil_low_query = oil_low_query.where(SensorReading.timestamp <= end_time)
+
+    result = await session.execute(oil_low_query)
+    violations["oil_low"] = result.scalar() or 0
+
+    # Check oil pressure violations (high)
+    oil_high_query = select(func.count()).select_from(SensorReading).where(
+        and_(
+            SensorReading.sensor_type == "oil_pressure",
+            SensorReading.value > thresholds["oil_pressure_max"]
+        )
+    )
+    if start_time:
+        oil_high_query = oil_high_query.where(SensorReading.timestamp >= start_time)
+    if end_time:
+        oil_high_query = oil_high_query.where(SensorReading.timestamp <= end_time)
+
+    result = await session.execute(oil_high_query)
+    violations["oil_high"] = result.scalar() or 0
+
+    # Check temperature violations
+    temp_query = select(func.count()).select_from(SensorReading).where(
+        and_(
+            SensorReading.sensor_type == "coolant_temp",
+            SensorReading.value > thresholds["coolant_temp_max"]
+        )
+    )
+    if start_time:
+        temp_query = temp_query.where(SensorReading.timestamp >= start_time)
+    if end_time:
+        temp_query = temp_query.where(SensorReading.timestamp <= end_time)
+
+    result = await session.execute(temp_query)
+    violations["temp_high"] = result.scalar() or 0
+
+    violations["total"] = (
+        violations["rpm_exceeded"] +
+        violations["oil_low"] +
+        violations["oil_high"] +
+        violations["temp_high"]
+    )
+
+    return violations
 
 
 @router.get("/usage-summary")

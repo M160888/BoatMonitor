@@ -47,8 +47,13 @@ const EngineLogs = () => {
     }
   }
 
-  const StatCard = ({ title, value, unit, icon, color = 'water' }) => (
-    <div className={`bg-gradient-to-br from-${color}-600 to-${color}-700 rounded-lg p-6 shadow-xl`}>
+  const StatCard = ({ title, value, unit, icon, color = 'water', warning = false, warningCount = 0 }) => (
+    <div className={`bg-gradient-to-br from-${color}-600 to-${color}-700 rounded-lg p-6 shadow-xl relative`}>
+      {warning && warningCount > 0 && (
+        <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
+          ⚠️ {warningCount}
+        </div>
+      )}
       <div className="flex items-center justify-between mb-2">
         <span className="text-4xl">{icon}</span>
         <span className="text-sm text-white/70">{title}</span>
@@ -57,6 +62,11 @@ const EngineLogs = () => {
         {value}
         <span className="text-lg ml-2 text-white/80">{unit}</span>
       </div>
+      {warning && warningCount > 0 && (
+        <div className="mt-2 text-xs text-red-200">
+          Exceeded threshold {warningCount}x
+        </div>
+      )}
     </div>
   )
 
@@ -120,6 +130,45 @@ const EngineLogs = () => {
         </div>
       )}
 
+      {/* Violations Warning Banner */}
+      {stats?.violations?.total > 0 && (
+        <div className="bg-red-900/30 border-2 border-red-500 rounded-lg p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <span className="text-4xl">🚨</span>
+            <div>
+              <h3 className="text-xl font-bold text-red-200">
+                {stats.violations.total} Threshold Violation{stats.violations.total > 1 ? 's' : ''} Detected
+              </h3>
+              <p className="text-sm text-red-300">
+                Sensors exceeded safe operating limits during this period
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+            {stats.violations.rpm_exceeded > 0 && (
+              <div className="bg-red-900/50 rounded px-3 py-2">
+                <span className="font-bold">{stats.violations.rpm_exceeded}x</span> High RPM
+              </div>
+            )}
+            {stats.violations.oil_low > 0 && (
+              <div className="bg-red-900/50 rounded px-3 py-2">
+                <span className="font-bold">{stats.violations.oil_low}x</span> Low Oil
+              </div>
+            )}
+            {stats.violations.oil_high > 0 && (
+              <div className="bg-red-900/50 rounded px-3 py-2">
+                <span className="font-bold">{stats.violations.oil_high}x</span> High Oil
+              </div>
+            )}
+            {stats.violations.temp_high > 0 && (
+              <div className="bg-red-900/50 rounded px-3 py-2">
+                <span className="font-bold">{stats.violations.temp_high}x</span> High Temp
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Key Statistics */}
       {stats && (
         <>
@@ -137,6 +186,8 @@ const EngineLogs = () => {
               unit="RPM"
               icon="🚤"
               color="sun"
+              warning={stats.violations?.rpm_exceeded > 0}
+              warningCount={stats.violations?.rpm_exceeded}
             />
             <StatCard
               title="Avg RPM"
@@ -155,7 +206,12 @@ const EngineLogs = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-gray-800 rounded-lg p-6 shadow-xl">
+            <div className="bg-gray-800 rounded-lg p-6 shadow-xl relative">
+              {(stats.violations?.oil_low > 0 || stats.violations?.oil_high > 0) && (
+                <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                  ⚠️ {stats.violations.oil_low + stats.violations.oil_high}
+                </div>
+              )}
               <h3 className="text-lg font-bold mb-4 text-water-400">Oil Pressure</h3>
               <div className="space-y-2">
                 <div className="flex justify-between">
@@ -168,19 +224,30 @@ const EngineLogs = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Min:</span>
-                  <span className={stats.oil_pressure.min < 20 ? 'text-red-500 font-bold' : 'font-bold'}>
+                  <span className={stats.oil_pressure.min < (stats.thresholds?.oil_pressure_min || 20) ? 'text-red-500 font-bold' : 'font-bold'}>
                     {stats.oil_pressure.min.toFixed(1)} PSI
                   </span>
                 </div>
               </div>
+              {(stats.violations?.oil_low > 0 || stats.violations?.oil_high > 0) && (
+                <div className="mt-2 text-xs text-red-400">
+                  {stats.violations.oil_low > 0 && `Low: ${stats.violations.oil_low}x `}
+                  {stats.violations.oil_high > 0 && `High: ${stats.violations.oil_high}x`}
+                </div>
+              )}
             </div>
 
-            <div className="bg-gray-800 rounded-lg p-6 shadow-xl">
+            <div className="bg-gray-800 rounded-lg p-6 shadow-xl relative">
+              {stats.violations?.temp_high > 0 && (
+                <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                  ⚠️ {stats.violations.temp_high}
+                </div>
+              )}
               <h3 className="text-lg font-bold mb-4 text-sun-400">Coolant Temperature</h3>
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-gray-400">Max:</span>
-                  <span className={stats.coolant_temperature.max > 95 ? 'text-red-500 font-bold' : 'font-bold'}>
+                  <span className={stats.coolant_temperature.max > (stats.thresholds?.coolant_temp_max || 95) ? 'text-red-500 font-bold' : 'font-bold'}>
                     {stats.coolant_temperature.max.toFixed(1)} °C
                   </span>
                 </div>
@@ -193,6 +260,11 @@ const EngineLogs = () => {
                   <span className="font-bold">{stats.coolant_temperature.min.toFixed(1)} °C</span>
                 </div>
               </div>
+              {stats.violations?.temp_high > 0 && (
+                <div className="mt-2 text-xs text-red-400">
+                  Exceeded {stats.violations.temp_high}x
+                </div>
+              )}
             </div>
 
             <div className="bg-gray-800 rounded-lg p-6 shadow-xl">
