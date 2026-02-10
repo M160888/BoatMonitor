@@ -22,7 +22,7 @@ const Dashboard = () => {
 
   const widgets = [
     {
-      id: 'rpm',
+      id: 'engine_rpm',
       title: 'Engine RPM',
       value: sensors.engine_rpm || 0,
       unit: 'RPM',
@@ -30,7 +30,7 @@ const Dashboard = () => {
       color: 'water',
     },
     {
-      id: 'oil-pressure',
+      id: 'oil_pressure',
       title: 'Oil Pressure',
       value: sensors.oil_pressure || 0,
       unit: 'PSI',
@@ -38,7 +38,7 @@ const Dashboard = () => {
       color: 'sun',
     },
     {
-      id: 'coolant-temp',
+      id: 'coolant_temp',
       title: 'Coolant Temp',
       value: sensors.coolant_temp || 0,
       unit: '°C',

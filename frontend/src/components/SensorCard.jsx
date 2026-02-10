@@ -7,6 +7,9 @@ const SensorCard = ({ id, title, value, unit, icon, color, type }) => {
 
   useEffect(() => {
     loadThresholds()
+    // Reload thresholds every 10 seconds to catch updates
+    const interval = setInterval(loadThresholds, 10000)
+    return () => clearInterval(interval)
   }, [])
 
   const loadThresholds = async () => {
