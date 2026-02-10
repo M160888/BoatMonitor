@@ -86,7 +86,7 @@ const Settings = () => {
 
       {/* Tab Content */}
       <div className="bg-gray-800 rounded-lg p-6 shadow-xl">
-        {activeTab === 'thresholds' && <ThresholdSettings />}
+        {activeTab === 'thresholds' && <ThresholdSettings password={password} />}
 
         {activeTab === 'calibration' && (
           <div>

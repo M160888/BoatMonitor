@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 
-const ThresholdSettings = () => {
+const ThresholdSettings = ({ password }) => {
   const [thresholds, setThresholds] = useState({
     engine_rpm_max: 3000,
     oil_pressure_min: 20,
@@ -28,7 +28,9 @@ const ThresholdSettings = () => {
     setLoading(true)
     setMessage('')
     try {
-      await axios.put('/api/thresholds', thresholds)
+      await axios.put('/api/thresholds', thresholds, {
+        headers: { password }
+      })
       setMessage('✅ Thresholds saved successfully!')
       setTimeout(() => setMessage(''), 3000)
     } catch (error) {
@@ -44,7 +46,9 @@ const ThresholdSettings = () => {
 
     setLoading(true)
     try {
-      const response = await axios.post('/api/thresholds/reset')
+      const response = await axios.post('/api/thresholds/reset', null, {
+        headers: { password }
+      })
       setThresholds(response.data.thresholds)
       setMessage('✅ Thresholds reset to defaults')
       setTimeout(() => setMessage(''), 3000)
