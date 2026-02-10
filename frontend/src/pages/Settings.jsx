@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import axios from 'axios'
 import ThresholdSettings from '../components/ThresholdSettings'
+import SensorCalibration from '../components/SensorCalibration'
 
 const Settings = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -88,15 +89,7 @@ const Settings = () => {
       <div className="bg-gray-800 rounded-lg p-6 shadow-xl">
         {activeTab === 'thresholds' && <ThresholdSettings password={password} />}
 
-        {activeTab === 'calibration' && (
-          <div>
-            <h3 className="text-xl font-bold mb-4">Sensor Calibration</h3>
-            <p className="text-gray-400 mb-4">
-              Configure calibration settings for sensors
-            </p>
-            {/* Calibration form will go here */}
-          </div>
-        )}
+        {activeTab === 'calibration' && <SensorCalibration password={password} />}
 
         {activeTab === 'hardware' && (
           <div>
