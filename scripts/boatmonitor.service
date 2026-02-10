@@ -1,0 +1,15 @@
+[Unit]
+Description=BoatMonitor Backend Service
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/BoatMonitor/backend
+Environment="PATH=/home/pi/BoatMonitor/backend/venv/bin"
+ExecStart=/home/pi/BoatMonitor/backend/venv/bin/python main.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
