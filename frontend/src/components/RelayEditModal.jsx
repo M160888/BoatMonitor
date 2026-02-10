@@ -5,11 +5,12 @@ const RelayEditModal = ({ relay, onSave, onClose }) => {
     name: relay.name,
     enabled: relay.enabled,
     mode: relay.mode,
-    timed_duration: relay.timed_duration || 60,
+    timed_duration: relay.timed_duration || 0,
   })
 
   // Convert seconds to hours/minutes/seconds for display
   const [timeUnit, setTimeUnit] = useState(
+    config.timed_duration === 0 ? 'seconds' :
     config.timed_duration >= 3600 ? 'hours' :
     config.timed_duration >= 60 ? 'minutes' : 'seconds'
   )
@@ -151,10 +152,11 @@ const RelayEditModal = ({ relay, onSave, onClose }) => {
               <input
                 type="number"
                 step="0.1"
-                min="0.1"
+                min="0"
                 value={getTimeValue()}
                 onChange={(e) => setTimeValue(e.target.value)}
                 className="w-full px-4 py-2 bg-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-sun-500"
+                placeholder="Enter duration"
               />
               <p className="text-xs text-gray-500 mt-1">
                 Total duration: {formatDuration(config.timed_duration)}

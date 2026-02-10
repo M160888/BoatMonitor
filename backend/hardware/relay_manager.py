@@ -30,7 +30,7 @@ class RelayManager:
                     "name": f"Relay {board_id * 3 + relay_num + 1}",
                     "enabled": True,
                     "mode": "normal",  # normal or timed
-                    "timed_duration": 60,  # seconds (for timed mode - can be hours: 3600)
+                    "timed_duration": 0,  # seconds (0 = must be set before use)
                 }
 
         if not self.simulation_mode:
