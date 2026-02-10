@@ -34,11 +34,8 @@ const Relays = () => {
     }
 
     websocket.onclose = () => {
-      console.log('WebSocket disconnected, reconnecting...')
-      setTimeout(() => {
-        // Reconnect after 3 seconds
-        window.location.reload()
-      }, 3000)
+      console.log('WebSocket disconnected')
+      // Don't reload page, just let it reconnect on next mount or use fallback polling
     }
 
     setWs(websocket)
