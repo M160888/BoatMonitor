@@ -68,7 +68,7 @@ async def sensor_websocket(websocket: WebSocket):
                 }
                 await websocket.send_json(data)
 
-            await asyncio.sleep(0.5)  # Send updates every 500ms
+            await asyncio.sleep(2.0)  # Send updates every 2 seconds
 
     except WebSocketDisconnect:
         active_connections.remove(websocket)

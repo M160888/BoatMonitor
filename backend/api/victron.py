@@ -91,7 +91,7 @@ async def victron_websocket(websocket: WebSocket):
                 }
                 await websocket.send_json(message)
 
-            await asyncio.sleep(1.0)  # Send updates every second
+            await asyncio.sleep(2.0)  # Send updates every 2 seconds
 
     except WebSocketDisconnect:
         active_connections.remove(websocket)

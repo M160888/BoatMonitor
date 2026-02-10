@@ -22,8 +22,8 @@ class Settings(BaseSettings):
     AUTOMATION_2040W_COUNT: int = 2
 
     # Sensor polling intervals (seconds)
-    SENSOR_POLL_INTERVAL: float = 0.5
-    VICTRON_POLL_INTERVAL: float = 1.0
+    SENSOR_POLL_INTERVAL: float = 5.0  # Update sensor readings every 5 seconds
+    VICTRON_POLL_INTERVAL: float = 5.0  # Update Victron data every 5 seconds
     HISTORY_SAVE_INTERVAL: float = 60.0  # Save to database every minute
 
     # Security
