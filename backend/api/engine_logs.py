@@ -20,7 +20,6 @@ async def get_engine_statistics(
 ):
     """Get comprehensive engine usage statistics with threshold violations"""
     from main import data_logger
-    import axios
 
     if not data_logger:
         raise HTTPException(status_code=503, detail="Data logger not available")

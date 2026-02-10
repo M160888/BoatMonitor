@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, Dot } from 'recharts'
 
 const EngineLogs = () => {
   const [timeRange, setTimeRange] = useState(7)
@@ -8,6 +8,8 @@ const EngineLogs = () => {
   const [usageSummary, setUsageSummary] = useState(null)
   const [alerts, setAlerts] = useState([])
   const [rpmHistory, setRpmHistory] = useState([])
+  const [tempHistory, setTempHistory] = useState([])
+  const [thresholds, setThresholds] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -20,9 +22,10 @@ const EngineLogs = () => {
   const loadData = async () => {
     setLoading(true)
     try {
-      // Load statistics
+      // Load statistics (includes thresholds)
       const statsRes = await axios.get('/api/engine/statistics')
       setStats(statsRes.data)
+      setThresholds(statsRes.data.thresholds)
 
       // Load usage summary
       const usageRes = await axios.get(`/api/engine/usage-summary?days=${timeRange}`)
@@ -36,9 +39,19 @@ const EngineLogs = () => {
       const historyRes = await axios.get(`/api/history/sensors/engine_rpm?limit=100`)
       const chartData = historyRes.data.data.map(d => ({
         time: new Date(d.timestamp).toLocaleTimeString(),
-        rpm: d.value
+        rpm: d.value,
+        timestamp: d.timestamp
       }))
       setRpmHistory(chartData)
+
+      // Load coolant temperature history for chart
+      const tempRes = await axios.get(`/api/history/sensors/coolant_temp?limit=100`)
+      const tempData = tempRes.data.data.map(d => ({
+        time: new Date(d.timestamp).toLocaleTimeString(),
+        temp: d.value,
+        timestamp: d.timestamp
+      }))
+      setTempHistory(tempData)
 
     } catch (error) {
       console.error('Error loading engine data:', error)
@@ -291,7 +304,7 @@ const EngineLogs = () => {
       )}
 
       {/* RPM Chart */}
-      {rpmHistory.length > 0 && (
+      {rpmHistory.length > 0 && thresholds && (
         <div className="bg-gray-800 rounded-lg p-6 shadow-xl">
           <h3 className="text-xl font-bold mb-4 text-white">Recent RPM History</h3>
           <ResponsiveContainer width="100%" height={300}>
@@ -305,15 +318,159 @@ const EngineLogs = () => {
                   border: '1px solid #374151',
                   borderRadius: '8px',
                 }}
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload
+                    const isViolation = data.rpm > thresholds.engine_rpm_max
+                    return (
+                      <div className="bg-gray-800 border border-gray-700 rounded-lg p-3">
+                        <p className="text-gray-400 text-sm">{data.time}</p>
+                        <p className={`font-bold ${isViolation ? 'text-red-500' : 'text-water-400'}`}>
+                          {data.rpm.toFixed(1)} RPM {isViolation ? '⚠️' : ''}
+                        </p>
+                        {isViolation && (
+                          <p className="text-red-400 text-xs">Exceeds threshold ({thresholds.engine_rpm_max})</p>
+                        )}
+                      </div>
+                    )
+                  }
+                  return null
+                }}
               />
               <Legend />
+              {/* Threshold reference line */}
+              <ReferenceLine
+                y={thresholds.engine_rpm_max}
+                stroke="#ef4444"
+                strokeDasharray="5 5"
+                strokeWidth={2}
+                label={{
+                  value: `Max: ${thresholds.engine_rpm_max}`,
+                  position: 'right',
+                  fill: '#ef4444',
+                  fontSize: 12
+                }}
+              />
               <Line
                 type="monotone"
                 dataKey="rpm"
                 stroke="#0ea5e9"
                 strokeWidth={2}
-                dot={{ fill: '#0ea5e9', r: 3 }}
+                dot={(props) => {
+                  const { cx, cy, payload } = props
+                  const isViolation = payload.rpm > thresholds.engine_rpm_max
+                  return (
+                    <g>
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={isViolation ? 5 : 3}
+                        fill={isViolation ? '#ef4444' : '#0ea5e9'}
+                        stroke={isViolation ? '#fee2e2' : '#0ea5e9'}
+                        strokeWidth={isViolation ? 2 : 0}
+                      />
+                      {isViolation && (
+                        <text
+                          x={cx}
+                          y={cy - 10}
+                          textAnchor="middle"
+                          fill="#ef4444"
+                          fontSize="16"
+                        >
+                          🚩
+                        </text>
+                      )}
+                    </g>
+                  )
+                }}
                 name="Engine RPM"
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Coolant Temperature Chart */}
+      {tempHistory.length > 0 && thresholds && (
+        <div className="bg-gray-800 rounded-lg p-6 shadow-xl">
+          <h3 className="text-xl font-bold mb-4 text-white">Recent Coolant Temperature History</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={tempHistory}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+              <XAxis dataKey="time" stroke="#888" />
+              <YAxis stroke="#888" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#1f2937',
+                  border: '1px solid #374151',
+                  borderRadius: '8px',
+                }}
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload
+                    const isViolation = data.temp > thresholds.coolant_temp_max
+                    return (
+                      <div className="bg-gray-800 border border-gray-700 rounded-lg p-3">
+                        <p className="text-gray-400 text-sm">{data.time}</p>
+                        <p className={`font-bold ${isViolation ? 'text-red-500' : 'text-sun-400'}`}>
+                          {data.temp.toFixed(1)} °C {isViolation ? '⚠️' : ''}
+                        </p>
+                        {isViolation && (
+                          <p className="text-red-400 text-xs">Exceeds threshold ({thresholds.coolant_temp_max}°C)</p>
+                        )}
+                      </div>
+                    )
+                  }
+                  return null
+                }}
+              />
+              <Legend />
+              {/* Threshold reference line */}
+              <ReferenceLine
+                y={thresholds.coolant_temp_max}
+                stroke="#ef4444"
+                strokeDasharray="5 5"
+                strokeWidth={2}
+                label={{
+                  value: `Max: ${thresholds.coolant_temp_max}°C`,
+                  position: 'right',
+                  fill: '#ef4444',
+                  fontSize: 12
+                }}
+              />
+              <Line
+                type="monotone"
+                dataKey="temp"
+                stroke="#f59e0b"
+                strokeWidth={2}
+                dot={(props) => {
+                  const { cx, cy, payload } = props
+                  const isViolation = payload.temp > thresholds.coolant_temp_max
+                  return (
+                    <g>
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={isViolation ? 5 : 3}
+                        fill={isViolation ? '#ef4444' : '#f59e0b'}
+                        stroke={isViolation ? '#fee2e2' : '#f59e0b'}
+                        strokeWidth={isViolation ? 2 : 0}
+                      />
+                      {isViolation && (
+                        <text
+                          x={cx}
+                          y={cy - 10}
+                          textAnchor="middle"
+                          fill="#ef4444"
+                          fontSize="16"
+                        >
+                          🚩
+                        </text>
+                      )}
+                    </g>
+                  )
+                }}
+                name="Coolant Temperature"
               />
             </LineChart>
           </ResponsiveContainer>

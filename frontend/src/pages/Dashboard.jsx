@@ -8,17 +8,33 @@ import { useSensorStore } from '../utils/store'
 
 const Dashboard = () => {
   const { sensors, victronData } = useSensorStore()
-  const [layout, setLayout] = useState([
-    { i: 'rpm', x: 0, y: 0, w: 2, h: 2 },
-    { i: 'oil-pressure', x: 2, y: 0, w: 2, h: 2 },
-    { i: 'coolant-temp', x: 4, y: 0, w: 2, h: 2 },
+
+  const defaultLayout = [
+    { i: 'engine_rpm', x: 0, y: 0, w: 2, h: 2 },
+    { i: 'oil_pressure', x: 2, y: 0, w: 2, h: 2 },
+    { i: 'coolant_temp', x: 4, y: 0, w: 2, h: 2 },
     { i: 'fuel-tank', x: 0, y: 2, w: 2, h: 2 },
     { i: 'water-tank', x: 2, y: 2, w: 2, h: 2 },
     { i: 'waste-tank', x: 4, y: 2, w: 2, h: 2 },
     { i: 'battery-leisure', x: 0, y: 4, w: 3, h: 2 },
     { i: 'battery-starter', x: 3, y: 4, w: 3, h: 2 },
     { i: 'solar', x: 0, y: 6, w: 6, h: 2 },
-  ])
+  ]
+
+  const [layout, setLayout] = useState(() => {
+    const saved = localStorage.getItem('dashboard-layout')
+    return saved ? JSON.parse(saved) : defaultLayout
+  })
+
+  const handleLayoutChange = (newLayout) => {
+    setLayout(newLayout)
+    localStorage.setItem('dashboard-layout', JSON.stringify(newLayout))
+  }
+
+  const resetLayout = () => {
+    setLayout(defaultLayout)
+    localStorage.setItem('dashboard-layout', JSON.stringify(defaultLayout))
+  }
 
   const widgets = [
     {
@@ -78,8 +94,11 @@ const Dashboard = () => {
     <div className="dashboard">
       <div className="mb-6 flex justify-between items-center">
         <h2 className="text-3xl font-bold text-white">Dashboard</h2>
-        <button className="px-4 py-2 bg-water-600 hover:bg-water-700 rounded-lg transition-colors">
-          Edit Layout
+        <button
+          onClick={resetLayout}
+          className="px-4 py-2 bg-water-600 hover:bg-water-700 rounded-lg transition-colors"
+        >
+          Reset Layout
         </button>
       </div>
 
@@ -89,7 +108,7 @@ const Dashboard = () => {
         cols={6}
         rowHeight={100}
         width={1200}
-        onLayoutChange={(newLayout) => setLayout(newLayout)}
+        onLayoutChange={handleLayoutChange}
         draggableHandle=".drag-handle"
       >
         {widgets.map((widget) => (
