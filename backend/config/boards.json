@@ -1,0 +1,35 @@
+{
+  "boards": [
+    {
+      "board_id": "board-1",
+      "board_name": "Engine Sensors",
+      "connection_type": "wired",
+      "i2c_address": null,
+      "sensors": {
+        "engine_rpm": {"type": "frequency", "channel": 1},
+        "oil_pressure": {"type": "analog", "channel": 1},
+        "coolant_temp": {"type": "analog", "channel": 2}
+      },
+      "relays": {}
+    },
+    {
+      "board_id": "board-2",
+      "board_name": "Tank Sensors & Relays",
+      "connection_type": "wireless",
+      "ip_address": "192.168.4.100",
+      "sensors": {
+        "fuel_tank": {"type": "analog", "channel": 1},
+        "water_tank": {"type": "analog", "channel": 2},
+        "waste_tank": {"type": "analog", "channel": 3}
+      },
+      "relays": {
+        "1": "Bilge Pump",
+        "2": "Navigation Lights",
+        "3": "Deck Lights",
+        "4": "Anchor Light",
+        "5": "Horn",
+        "6": "Spotlight"
+      }
+    }
+  ]
+}
