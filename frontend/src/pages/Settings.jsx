@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import axios from 'axios'
+import ThresholdSettings from '../components/ThresholdSettings'
 
 const Settings = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -46,7 +47,8 @@ const Settings = () => {
   }
 
   const tabs = [
-    { id: 'calibration', label: 'Sensor Calibration', icon: '🎯' },
+    { id: 'thresholds', label: 'Thresholds', icon: '⚠️' },
+    { id: 'calibration', label: 'Calibration', icon: '🎯' },
     { id: 'hardware', label: 'Hardware', icon: '🔧' },
     { id: 'network', label: 'Network', icon: '📡' },
     { id: 'system', label: 'System', icon: '⚙️' },
@@ -84,6 +86,8 @@ const Settings = () => {
 
       {/* Tab Content */}
       <div className="bg-gray-800 rounded-lg p-6 shadow-xl">
+        {activeTab === 'thresholds' && <ThresholdSettings />}
+
         {activeTab === 'calibration' && (
           <div>
             <h3 className="text-xl font-bold mb-4">Sensor Calibration</h3>

@@ -1,12 +1,25 @@
+import { useState, useEffect } from 'react'
+import axios from 'axios'
+import { getStatusColor, getColorClasses, getWarningIcon } from '../utils/thresholds'
+
 const SensorCard = ({ id, title, value, unit, icon, color, type }) => {
-  const getColorClasses = (color) => {
-    const colors = {
-      nature: 'from-nature-600 to-nature-700 shadow-nature-500/20',
-      water: 'from-water-600 to-water-700 shadow-water-500/20',
-      sun: 'from-sun-600 to-sun-700 shadow-sun-500/20',
+  const [thresholds, setThresholds] = useState(null)
+
+  useEffect(() => {
+    loadThresholds()
+  }, [])
+
+  const loadThresholds = async () => {
+    try {
+      const response = await axios.get('/api/thresholds')
+      setThresholds(response.data)
+    } catch (error) {
+      console.error('Error loading thresholds:', error)
     }
-    return colors[color] || colors.water
   }
+
+  const status = getStatusColor(id, value, thresholds)
+  const warningIcon = getWarningIcon(status)
 
   const formatValue = (val) => {
     if (typeof val === 'number') {
@@ -18,6 +31,7 @@ const SensorCard = ({ id, title, value, unit, icon, color, type }) => {
   return (
     <div
       className={`h-full bg-gradient-to-br ${getColorClasses(
+        status,
         color
       )} rounded-lg p-4 shadow-xl hover:scale-105 transition-transform cursor-move relative`}
     >
@@ -27,9 +41,14 @@ const SensorCard = ({ id, title, value, unit, icon, color, type }) => {
       </div>
 
       <div className="flex flex-col h-full justify-between">
-        <div className="flex items-center space-x-2 mb-2">
-          <span className="text-3xl">{icon}</span>
-          <h3 className="text-sm font-semibold text-white/90">{title}</h3>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center space-x-2">
+            <span className="text-3xl">{icon}</span>
+            <h3 className="text-sm font-semibold text-white/90">{title}</h3>
+          </div>
+          {warningIcon && (
+            <span className="text-2xl animate-pulse">{warningIcon}</span>
+          )}
         </div>
 
         <div className="flex-1 flex items-center justify-center">

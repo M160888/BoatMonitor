@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
-from api import sensors, victron, relays, relays_ws, settings, history, engine_logs
+from api import sensors, victron, relays, relays_ws, settings, history, engine_logs, thresholds
 from hardware.sensor_manager import SensorManager
 from hardware.relay_manager import RelayManager
 from victron.device_manager import VictronManager
@@ -91,6 +91,7 @@ app.include_router(relays_ws.router, prefix="/api/relays", tags=["relays"])
 app.include_router(settings.router, prefix="/api/settings", tags=["settings"])
 app.include_router(history.router, prefix="/api/history", tags=["history"])
 app.include_router(engine_logs.router, prefix="/api/engine", tags=["engine"])
+app.include_router(thresholds.router, prefix="/api/thresholds", tags=["thresholds"])
 
 
 @app.get("/api/health")
