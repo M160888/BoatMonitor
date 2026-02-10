@@ -1,24 +1,31 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import GridLayout from 'react-grid-layout'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import SensorCard from '../components/SensorCard'
 import VictronCard from '../components/VictronCard'
+import RealTimeAlert from '../components/RealTimeAlert'
+import FuelEstimateCard from '../components/FuelEstimateCard'
+import WeatherTimeCard from '../components/WeatherTimeCard'
 import { useSensorStore } from '../utils/store'
 
 const Dashboard = () => {
   const { sensors, victronData } = useSensorStore()
+  const containerRef = useRef(null)
+  const [containerWidth, setContainerWidth] = useState(1200)
 
   const defaultLayout = [
-    { i: 'engine_rpm', x: 0, y: 0, w: 2, h: 2 },
-    { i: 'oil_pressure', x: 2, y: 0, w: 2, h: 2 },
-    { i: 'coolant_temp', x: 4, y: 0, w: 2, h: 2 },
-    { i: 'fuel-tank', x: 0, y: 2, w: 2, h: 2 },
-    { i: 'water-tank', x: 2, y: 2, w: 2, h: 2 },
-    { i: 'waste-tank', x: 4, y: 2, w: 2, h: 2 },
-    { i: 'battery-leisure', x: 0, y: 4, w: 3, h: 2 },
-    { i: 'battery-starter', x: 3, y: 4, w: 3, h: 2 },
-    { i: 'solar', x: 0, y: 6, w: 6, h: 2 },
+    { i: 'weather-time', x: 0, y: 0, w: 2, h: 2 },
+    { i: 'engine_rpm', x: 2, y: 0, w: 2, h: 2 },
+    { i: 'fuel-estimate', x: 4, y: 0, w: 2, h: 2 },
+    { i: 'oil_pressure', x: 0, y: 2, w: 2, h: 2 },
+    { i: 'coolant_temp', x: 2, y: 2, w: 2, h: 2 },
+    { i: 'fuel-tank', x: 4, y: 2, w: 2, h: 2 },
+    { i: 'water-tank', x: 0, y: 4, w: 2, h: 2 },
+    { i: 'waste-tank', x: 2, y: 4, w: 2, h: 2 },
+    { i: 'battery-leisure', x: 0, y: 6, w: 3, h: 2 },
+    { i: 'battery-starter', x: 3, y: 6, w: 3, h: 2 },
+    { i: 'solar', x: 0, y: 8, w: 6, h: 2 },
   ]
 
   const [layout, setLayout] = useState(() => {
@@ -35,6 +42,18 @@ const Dashboard = () => {
     setLayout(defaultLayout)
     localStorage.setItem('dashboard-layout', JSON.stringify(defaultLayout))
   }
+
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth)
+      }
+    }
+
+    updateWidth()
+    window.addEventListener('resize', updateWidth)
+    return () => window.removeEventListener('resize', updateWidth)
+  }, [])
 
   const widgets = [
     {
@@ -91,7 +110,9 @@ const Dashboard = () => {
   ]
 
   return (
-    <div className="dashboard">
+    <div className="dashboard" ref={containerRef}>
+      <RealTimeAlert />
+
       <div className="mb-6 flex justify-between items-center">
         <h2 className="text-3xl font-bold text-white">Dashboard</h2>
         <button
@@ -107,10 +128,18 @@ const Dashboard = () => {
         layout={layout}
         cols={6}
         rowHeight={100}
-        width={1200}
+        width={containerWidth}
         onLayoutChange={handleLayoutChange}
         draggableHandle=".drag-handle"
       >
+        <div key="weather-time">
+          <WeatherTimeCard />
+        </div>
+
+        <div key="fuel-estimate">
+          <FuelEstimateCard />
+        </div>
+
         {widgets.map((widget) => (
           <div key={widget.id} className="widget-container">
             <SensorCard {...widget} />
